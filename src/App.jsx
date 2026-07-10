@@ -317,7 +317,7 @@ const FitnessTracker = () => {
 
   const weekStart = getWeekStart();
   const sessionsThisWeek = sessions.filter(s => new Date(s.date) >= weekStart);
-  const totalSetsLogged = sessions.reduce((sum, s) => sum + s.entries.reduce((s2, en) => s2 + en.sets.length, 0), 0);
+  const totalExercisesLogged = sessions.reduce((sum, s) => sum + s.entries.length, 0);
   const otherUser = Object.keys(users).find(u => u !== currentUser);
 
   return (
@@ -360,8 +360,8 @@ const FitnessTracker = () => {
             )}
           </div>
           <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-semibold">SERIES REGISTRADAS</p>
-            <p className="text-4xl font-bold text-green-500 mt-2">{totalSetsLogged}</p>
+            <p className="text-gray-600 text-sm font-semibold">EJERCICIOS REGISTRADOS</p>
+            <p className="text-4xl font-bold text-green-500 mt-2">{totalExercisesLogged}</p>
             <p className="text-gray-500 text-xs mt-2">En todo el registro</p>
           </div>
         </div>
@@ -422,51 +422,40 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
   const [selectedDayId, setSelectedDayId] = useState(routine.days[0]?.id || '');
   const selectedDay = routine.days.find(d => d.id === selectedDayId) || routine.days[0];
 
-  const [logState, setLogState] = useState({}); // exerciseId -> [{weight, reps}]
+  const [logState, setLogState] = useState({}); // exerciseId -> {weight, reps}
 
   useEffect(() => {
     if (!selectedDay) return;
     const initial = {};
     selectedDay.exercises.forEach(exr => {
-      initial[exr.id] = Array.from({ length: exr.sets }, () => ({ weight: '', reps: '' }));
+      initial[exr.id] = { weight: '', reps: '' };
     });
     setLogState(initial);
   }, [selectedDayId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!selectedDay) return <p className="text-gray-600">Selecciona un día</p>;
 
-  const updateSet = (exerciseId, idx, field, value) => {
-    setLogState(prev => {
-      const sets = [...(prev[exerciseId] || [])];
-      sets[idx] = { ...sets[idx], [field]: value };
-      return { ...prev, [exerciseId]: sets };
-    });
-  };
-
-  const addSet = (exerciseId) => {
+  const updateField = (exerciseId, field, value) => {
     setLogState(prev => ({
       ...prev,
-      [exerciseId]: [...(prev[exerciseId] || []), { weight: '', reps: '' }]
-    }));
-  };
-
-  const removeSet = (exerciseId, idx) => {
-    setLogState(prev => ({
-      ...prev,
-      [exerciseId]: prev[exerciseId].filter((_, i) => i !== idx)
+      [exerciseId]: { ...(prev[exerciseId] || { weight: '', reps: '' }), [field]: value }
     }));
   };
 
   const saveSession = () => {
-    const entries = selectedDay.exercises.map(exr => {
-      const sets = (logState[exr.id] || [])
-        .filter(s => s.weight !== '' && s.reps !== '')
-        .map(s => ({ weight: parseFloat(s.weight), reps: parseInt(s.reps, 10) }));
-      return { exerciseId: exr.id, name: exr.name, targetSets: exr.sets, targetReps: exr.reps, sets };
-    }).filter(en => en.sets.length > 0);
+    const entries = selectedDay.exercises
+      .filter(exr => logState[exr.id] && logState[exr.id].weight !== '' && logState[exr.id].reps !== '')
+      .map(exr => ({
+        exerciseId: exr.id,
+        name: exr.name,
+        targetSets: exr.sets,
+        targetReps: exr.reps,
+        weight: parseFloat(logState[exr.id].weight),
+        reps: parseInt(logState[exr.id].reps, 10)
+      }));
 
     if (entries.length === 0) {
-      alert('Registra al menos una serie con peso y repeticiones');
+      alert('Registra al menos un ejercicio con peso y repeticiones');
       return;
     }
 
@@ -487,7 +476,7 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
 
     const reset = {};
     selectedDay.exercises.forEach(exr => {
-      reset[exr.id] = Array.from({ length: exr.sets }, () => ({ weight: '', reps: '' }));
+      reset[exr.id] = { weight: '', reps: '' };
     });
     setLogState(reset);
     alert('Entrenamiento guardado');
@@ -506,7 +495,7 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
         </select>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {selectedDay.exercises.map(exr => (
           <div key={exr.id} className="border border-gray-200 rounded-lg p-4">
             <div className="flex justify-between items-baseline mb-3">
@@ -515,35 +504,21 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
                 Objetivo: {exr.sets}x{exr.reps}{exr.rest ? ` · descanso ${exr.rest}` : ''}
               </span>
             </div>
-            <div className="space-y-2">
-              {(logState[exr.id] || []).map((s, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500 w-14">Serie {idx + 1}</span>
-                  <input
-                    type="number"
-                    value={s.weight}
-                    onChange={(e) => updateSet(exr.id, idx, 'weight', e.target.value)}
-                    placeholder="Peso (kg)"
-                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="number"
-                    value={s.reps}
-                    onChange={(e) => updateSet(exr.id, idx, 'reps', e.target.value)}
-                    placeholder="Repeticiones"
-                    className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <button onClick={() => removeSet(exr.id, idx)} className="text-red-500 hover:text-red-700">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => addSet(exr.id)}
-                className="text-blue-500 text-sm font-semibold hover:underline flex items-center gap-1"
-              >
-                <Plus size={14} /> Agregar serie
-              </button>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                value={logState[exr.id]?.weight ?? ''}
+                onChange={(e) => updateField(exr.id, 'weight', e.target.value)}
+                placeholder="Peso (kg)"
+                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="number"
+                value={logState[exr.id]?.reps ?? ''}
+                onChange={(e) => updateField(exr.id, 'reps', e.target.value)}
+                placeholder="Repeticiones"
+                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
             </div>
           </div>
         ))}
@@ -590,9 +565,7 @@ const TodaySessions = ({ currentUser, users, persist }) => {
           <div className="mt-2 space-y-1">
             {session.entries.map((en, idx) => (
               <p key={idx} className="text-gray-700">
-                • {en.name}: <span className="font-bold text-purple-600">
-                  {en.sets.map((s, i) => `${s.weight}kg x${s.reps}`).join(', ')}
-                </span>
+                • {en.name}: <span className="font-bold text-purple-600">{en.weight}kg x{en.reps}</span>
               </p>
             ))}
           </div>
@@ -726,9 +699,7 @@ const ExerciseProgressChart = ({ routine, sessions }) => {
     .filter(s => s.entries.some(en => en.name === selected))
     .map(s => {
       const entry = s.entries.find(en => en.name === selected);
-      const maxWeight = Math.max(...entry.sets.map(st => st.weight));
-      const maxReps = Math.max(...entry.sets.map(st => st.reps));
-      return { date: s.date, pesoMax: maxWeight, repsMax: maxReps };
+      return { date: s.date, pesoMax: entry.weight, repsMax: entry.reps };
     })
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -753,8 +724,8 @@ const ExerciseProgressChart = ({ routine, sessions }) => {
             <YAxis yAxisId="right" orientation="right" />
             <Tooltip />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="pesoMax" name="Peso máx (kg)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
-            <Line yAxisId="right" type="monotone" dataKey="repsMax" name="Reps máx" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
+            <Line yAxisId="left" type="monotone" dataKey="pesoMax" name="Peso (kg)" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4 }} />
+            <Line yAxisId="right" type="monotone" dataKey="repsMax" name="Repeticiones" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>
       )}
