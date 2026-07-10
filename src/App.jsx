@@ -310,9 +310,9 @@ const FitnessTracker = () => {
   // ---------- Login / registro ----------
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
-          <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">💪 Fitness Tracker</h1>
+      <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-3 sm:p-4">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-5 sm:p-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-center text-gray-800 mb-6 sm:mb-8">💪 Fitness Tracker</h1>
 
           {authError && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{authError}</div>
@@ -330,7 +330,7 @@ const FitnessTracker = () => {
                     type="email"
                     value={loginForm.email}
                     onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     placeholder="tu@correo.com"
                   />
                 </div>
@@ -341,7 +341,7 @@ const FitnessTracker = () => {
                       type={showPassword ? 'text' : 'password'}
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                       placeholder="Tu contraseña"
                     />
                     <button
@@ -355,7 +355,7 @@ const FitnessTracker = () => {
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition"
+                  className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition active:bg-blue-700"
                 >
                   Ingresar
                 </button>
@@ -379,7 +379,7 @@ const FitnessTracker = () => {
                     type="text"
                     value={registerForm.displayName}
                     onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     placeholder="Ej: Sebas"
                   />
                 </div>
@@ -389,7 +389,7 @@ const FitnessTracker = () => {
                     type="email"
                     value={registerForm.email}
                     onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     placeholder="tu@correo.com"
                   />
                 </div>
@@ -399,13 +399,13 @@ const FitnessTracker = () => {
                     type="password"
                     value={registerForm.password}
                     onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
                     placeholder="Mínimo 6 caracteres"
                   />
                 </div>
                 <button
                   type="submit"
-                  className="w-full bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition"
+                  className="w-full bg-green-500 text-white py-3 rounded-lg font-semibold hover:bg-green-600 transition active:bg-green-700"
                 >
                   Crear cuenta
                 </button>
@@ -440,35 +440,36 @@ const FitnessTracker = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 shadow-lg">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold">💪 Fitness Tracker</h1>
-            <p className="text-blue-100 text-sm">{routine.name || 'Sin rutina configurada'}</p>
+      <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-3 py-3 sm:p-4 shadow-lg">
+        <div className="max-w-6xl mx-auto flex justify-between items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-3xl font-bold truncate">💪 Fitness Tracker</h1>
+            <p className="text-blue-100 text-xs sm:text-sm truncate">{routine.name || 'Sin rutina configurada'}</p>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold">{profile.display_name}</span>
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <span className="text-sm sm:text-lg font-semibold max-w-[90px] sm:max-w-none truncate">{profile.display_name}</span>
             <button
               onClick={handleLogout}
-              className="bg-red-500 hover:bg-red-600 p-2 rounded-lg flex items-center gap-2"
+              className="bg-red-500 hover:bg-red-600 active:bg-red-700 p-2.5 rounded-lg flex items-center gap-2 flex-shrink-0"
+              title="Salir"
             >
-              <LogOut size={20} /> Salir
+              <LogOut size={18} /> <span className="hidden sm:inline">Salir</span>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto p-4 space-y-6">
+      <div className="max-w-6xl mx-auto px-3 py-4 sm:p-4 space-y-4 sm:space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-semibold">DÍAS ENTRENADOS ESTA SEMANA</p>
-            <p className="text-4xl font-bold text-blue-500 mt-2">{sessionsThisWeek.length}/{routine.days.length || '-'}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <p className="text-gray-600 text-xs sm:text-sm font-semibold">DÍAS ENTRENADOS ESTA SEMANA</p>
+            <p className="text-3xl sm:text-4xl font-bold text-blue-500 mt-2">{sessionsThisWeek.length}/{routine.days.length || '-'}</p>
             <p className="text-gray-500 text-xs mt-2">Objetivo: {routine.days.length || 0} días por semana</p>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-semibold">PESO CORPORAL ACTUAL</p>
-            <p className="text-4xl font-bold text-purple-500 mt-2">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <p className="text-gray-600 text-xs sm:text-sm font-semibold">PESO CORPORAL ACTUAL</p>
+            <p className="text-3xl sm:text-4xl font-bold text-purple-500 mt-2">
               {weeklyWeight.length > 0 ? `${weeklyWeight[weeklyWeight.length - 1].weight} kg` : 'Sin datos'}
             </p>
             {weeklyWeight.length > 1 && (
@@ -477,16 +478,16 @@ const FitnessTracker = () => {
               </p>
             )}
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-gray-600 text-sm font-semibold">EJERCICIOS REGISTRADOS</p>
-            <p className="text-4xl font-bold text-green-500 mt-2">{totalExercisesLogged}</p>
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <p className="text-gray-600 text-xs sm:text-sm font-semibold">EJERCICIOS REGISTRADOS</p>
+            <p className="text-3xl sm:text-4xl font-bold text-green-500 mt-2">{totalExercisesLogged}</p>
             <p className="text-gray-500 text-xs mt-2">En todo el registro</p>
           </div>
         </div>
 
         {/* Log workout */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Registrar Entrenamiento</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Registrar Entrenamiento</h2>
           {routine.days.length === 0 ? (
             <p className="text-gray-600">Todavía no tienes una rutina configurada. Ve a "Editar mi rutina" más abajo para crearla.</p>
           ) : (
@@ -495,38 +496,38 @@ const FitnessTracker = () => {
         </div>
 
         {/* Today's sessions */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Entrenamientos de Hoy</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Entrenamientos de Hoy</h2>
           <TodaySessions sessions={todaySessions} onDelete={handleDeleteSession} />
         </div>
 
         {/* Body weight */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Peso Corporal</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Peso Corporal</h2>
           <BodyWeightSection weeklyWeight={weeklyWeight} onAdd={handleAddWeight} onDelete={handleDeleteWeight} />
         </div>
 
         {/* Exercise progress */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Progreso por Ejercicio</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Progreso por Ejercicio</h2>
           <ExerciseProgressChart routine={routine} sessions={workoutSessions} />
         </div>
 
         {/* Days distribution */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Distribución de Días Entrenados</h2>
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Distribución de Días Entrenados</h2>
           <DaysChart sessions={workoutSessions} />
         </div>
 
         {/* Routine editor */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-4 sm:p-6">
           <RoutineEditor routine={routine} onUpdateRoutine={handleUpdateRoutine} />
         </div>
 
         {/* Partner summary */}
         {partner && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Resumen de {partner.profile.display_name}</h2>
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Resumen de {partner.profile.display_name}</h2>
             <PartnerSummary partner={partner} />
           </div>
         )}
@@ -599,7 +600,7 @@ const WorkoutLogger = ({ routine, onSaveSession }) => {
         <select
           value={selectedDayId}
           onChange={(e) => setSelectedDayId(e.target.value)}
-          className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full md:w-1/2 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
         >
           {routine.days.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
@@ -607,27 +608,29 @@ const WorkoutLogger = ({ routine, onSaveSession }) => {
 
       <div className="space-y-3">
         {selectedDay.exercises.map(exr => (
-          <div key={exr.id} className="border border-gray-200 rounded-lg p-4">
-            <div className="flex justify-between items-baseline mb-3">
-              <h3 className="font-bold text-gray-800">{exr.name}</h3>
-              <span className="text-sm text-gray-500">
+          <div key={exr.id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
+            <div className="flex flex-col mb-3">
+              <h3 className="font-bold text-gray-800 text-sm sm:text-base">{exr.name}</h3>
+              <span className="text-xs sm:text-sm text-gray-500">
                 Objetivo: {exr.sets}x{exr.reps}{exr.rest ? ` · descanso ${exr.rest}` : ''}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <input
                 type="number"
+                inputMode="decimal"
                 value={logState[exr.id]?.weight ?? ''}
                 onChange={(e) => updateField(exr.id, 'weight', e.target.value)}
                 placeholder="Peso (kg)"
-                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
               />
               <input
                 type="number"
+                inputMode="numeric"
                 value={logState[exr.id]?.reps ?? ''}
                 onChange={(e) => updateField(exr.id, 'reps', e.target.value)}
                 placeholder="Repeticiones"
-                className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 min-w-0 px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
               />
             </div>
           </div>
@@ -637,7 +640,7 @@ const WorkoutLogger = ({ routine, onSaveSession }) => {
       <button
         onClick={saveSession}
         disabled={saving}
-        className="w-full bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600 transition disabled:opacity-50"
+        className="w-full bg-blue-500 text-white py-3.5 rounded-lg font-bold hover:bg-blue-600 active:bg-blue-700 transition disabled:opacity-50"
       >
         {saving ? 'Guardando...' : 'Guardar Entrenamiento'}
       </button>
@@ -654,16 +657,16 @@ const TodaySessions = ({ sessions, onDelete }) => {
   return (
     <div className="space-y-3">
       {sessions.map(session => (
-        <div key={session.id} className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border-l-4 border-blue-500">
-          <div className="flex justify-between items-start">
-            <p className="font-bold text-lg text-gray-800">{session.day_name}</p>
-            <button onClick={() => onDelete(session.id)} className="text-red-500 hover:text-red-700">
+        <div key={session.id} className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 sm:p-4 rounded-lg border-l-4 border-blue-500">
+          <div className="flex justify-between items-start gap-2">
+            <p className="font-bold text-base sm:text-lg text-gray-800">{session.day_name}</p>
+            <button onClick={() => onDelete(session.id)} className="text-red-500 hover:text-red-700 flex-shrink-0 p-1">
               <Trash2 size={18} />
             </button>
           </div>
           <div className="mt-2 space-y-1">
             {session.entries.map((en, idx) => (
-              <p key={idx} className="text-gray-700">
+              <p key={idx} className="text-sm sm:text-base text-gray-700">
                 • {en.name}: <span className="font-bold text-purple-600">{en.weight}kg x{en.reps}</span>
               </p>
             ))}
@@ -695,31 +698,32 @@ const BodyWeightSection = ({ weeklyWeight, onAdd, onDelete }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-3 items-end">
-        <div className="flex-1">
+      <div className="flex flex-col md:flex-row gap-3 md:items-end">
+        <div className="w-full md:flex-1">
           <label className="block text-gray-700 font-semibold mb-2">Fecha</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
           />
         </div>
-        <div className="flex-1">
+        <div className="w-full md:flex-1">
           <label className="block text-gray-700 font-semibold mb-2">Peso (kg)</label>
           <input
             type="number"
+            inputMode="decimal"
             step="0.1"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             placeholder="Ej: 74.5"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
           />
         </div>
         <button
           onClick={addWeight}
           disabled={saving}
-          className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 font-semibold flex items-center gap-2 disabled:opacity-50"
+          className="w-full sm:w-auto bg-purple-500 text-white px-6 py-2.5 rounded-lg hover:bg-purple-600 active:bg-purple-700 font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Plus size={20} /> Registrar
         </button>
@@ -791,7 +795,7 @@ const ExerciseProgressChart = ({ routine, sessions }) => {
       <select
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
-        className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full md:w-1/2 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
       >
         {exerciseNames.map(n => <option key={n} value={n}>{n}</option>)}
       </select>
@@ -829,12 +833,19 @@ const DaysChart = ({ sessions }) => {
   if (data.length === 0) return <p className="text-gray-600">Sin datos aún</p>;
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie data={data} cx="50%" cy="50%" labelLine={false} label={({ name, value }) => `${name} (${value})`} outerRadius={80} fill="#8884d8" dataKey="value">
+    <ResponsiveContainer width="100%" height={320}>
+      <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+        <Pie data={data} cx="50%" cy="45%" outerRadius={70} fill="#8884d8" dataKey="value">
           {data.map((entry, index) => <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />)}
         </Pie>
         <Tooltip />
+        <Legend
+          layout="vertical"
+          align="center"
+          verticalAlign="bottom"
+          wrapperStyle={{ fontSize: '12px', lineHeight: '1.6' }}
+          formatter={(value, entry) => `${value} (${entry.payload.value})`}
+        />
       </PieChart>
     </ResponsiveContainer>
   );
@@ -917,27 +928,27 @@ const RoutineEditor = ({ routine, onUpdateRoutine }) => {
     <div>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex justify-between items-center text-2xl font-bold text-gray-800 mb-4"
+        className="w-full flex justify-between items-center text-xl sm:text-2xl font-bold text-gray-800 mb-4 py-1"
       >
         <span>Editar Mi Rutina</span>
         {open ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
       </button>
 
       {open && (
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           {draft.days.length === 0 && (
-            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+            <div className="bg-blue-50 p-3 sm:p-4 rounded-lg space-y-2">
               <p className="text-gray-700 text-sm">Puedes empezar desde cero o cargar una rutina de ejemplo para editar:</p>
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => loadTemplate(buildSebasRoutine)}
-                  className="bg-white border border-blue-300 text-blue-600 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-100"
+                  className="bg-white border border-blue-300 text-blue-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 active:bg-blue-200"
                 >
                   Usar rutina de Sebas
                 </button>
                 <button
                   onClick={() => loadTemplate(buildAnaRoutine)}
-                  className="bg-white border border-blue-300 text-blue-600 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-100"
+                  className="bg-white border border-blue-300 text-blue-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-100 active:bg-blue-200"
                 >
                   Usar rutina de Ana María
                 </button>
@@ -951,68 +962,71 @@ const RoutineEditor = ({ routine, onUpdateRoutine }) => {
               type="text"
               value={draft.name}
               onChange={(e) => updateRoutineName(e.target.value)}
-              className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full md:w-1/2 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
             />
           </div>
 
           {draft.days.map(d => (
-            <div key={d.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={d.id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
               <div className="flex items-center gap-2 mb-3">
                 <input
                   type="text"
                   value={d.name}
                   onChange={(e) => updateDayName(d.id, e.target.value)}
-                  className="flex-1 px-3 py-1.5 border border-gray-300 rounded-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 min-w-0 px-3 py-2 border border-gray-300 rounded-lg font-bold text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button onClick={() => deleteDay(d.id)} className="text-red-500 hover:text-red-700">
+                <button onClick={() => deleteDay(d.id)} className="text-red-500 hover:text-red-700 flex-shrink-0 p-1">
                   <Trash2 size={18} />
                 </button>
               </div>
 
               <div className="space-y-2">
                 {d.exercises.map(exr => (
-                  <div key={exr.id} className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded">
+                  <div key={exr.id} className="space-y-2 bg-gray-50 p-2 rounded">
                     <input
                       type="text"
                       value={exr.name}
                       onChange={(e) => updateExercise(d.id, exr.id, 'name', e.target.value)}
-                      className="flex-1 min-w-[140px] px-2 py-1 border border-gray-300 rounded"
+                      className="w-full px-2 py-2 border border-gray-300 rounded text-base"
                       placeholder="Nombre del ejercicio"
                     />
-                    <input
-                      type="number"
-                      value={exr.sets}
-                      onChange={(e) => updateExercise(d.id, exr.id, 'sets', parseInt(e.target.value, 10) || 0)}
-                      className="w-16 px-2 py-1 border border-gray-300 rounded"
-                      placeholder="Series"
-                      title="Series"
-                    />
-                    <span className="text-gray-500">x</span>
-                    <input
-                      type="text"
-                      value={exr.reps}
-                      onChange={(e) => updateExercise(d.id, exr.id, 'reps', e.target.value)}
-                      className="w-20 px-2 py-1 border border-gray-300 rounded"
-                      placeholder="Reps"
-                      title="Repeticiones"
-                    />
-                    <input
-                      type="text"
-                      value={exr.rest || ''}
-                      onChange={(e) => updateExercise(d.id, exr.id, 'rest', e.target.value)}
-                      className="w-24 px-2 py-1 border border-gray-300 rounded"
-                      placeholder="Descanso"
-                      title="Descanso (opcional)"
-                    />
-                    <button onClick={() => deleteExercise(d.id, exr.id)} className="text-red-400 hover:text-red-600">
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        value={exr.sets}
+                        onChange={(e) => updateExercise(d.id, exr.id, 'sets', parseInt(e.target.value, 10) || 0)}
+                        className="w-14 px-2 py-2 border border-gray-300 rounded text-base text-center"
+                        placeholder="Series"
+                        title="Series"
+                      />
+                      <span className="text-gray-500 flex-shrink-0">x</span>
+                      <input
+                        type="text"
+                        value={exr.reps}
+                        onChange={(e) => updateExercise(d.id, exr.id, 'reps', e.target.value)}
+                        className="flex-1 min-w-0 px-2 py-2 border border-gray-300 rounded text-base"
+                        placeholder="Reps"
+                        title="Repeticiones"
+                      />
+                      <input
+                        type="text"
+                        value={exr.rest || ''}
+                        onChange={(e) => updateExercise(d.id, exr.id, 'rest', e.target.value)}
+                        className="flex-1 min-w-0 px-2 py-2 border border-gray-300 rounded text-base"
+                        placeholder="Descanso"
+                        title="Descanso (opcional)"
+                      />
+                      <button onClick={() => deleteExercise(d.id, exr.id)} className="text-red-400 hover:text-red-600 flex-shrink-0 p-1">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
               <button
                 onClick={() => addExercise(d.id)}
-                className="mt-3 text-blue-500 text-sm font-semibold hover:underline flex items-center gap-1"
+                className="mt-3 text-blue-500 text-sm font-semibold hover:underline flex items-center gap-1 py-1"
               >
                 <Plus size={14} /> Agregar ejercicio
               </button>
@@ -1021,7 +1035,7 @@ const RoutineEditor = ({ routine, onUpdateRoutine }) => {
 
           <button
             onClick={addDay}
-            className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
+            className="w-full bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 active:bg-gray-300 transition flex items-center justify-center gap-2"
           >
             <Plus size={18} /> Agregar día de rutina
           </button>
@@ -1029,7 +1043,7 @@ const RoutineEditor = ({ routine, onUpdateRoutine }) => {
           <button
             onClick={saveChanges}
             disabled={!dirty || saving}
-            className="w-full bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600 transition disabled:opacity-50"
+            className="w-full bg-blue-500 text-white py-3.5 rounded-lg font-bold hover:bg-blue-600 active:bg-blue-700 transition disabled:opacity-50"
           >
             {saving ? 'Guardando...' : 'Guardar Rutina'}
           </button>
@@ -1041,13 +1055,13 @@ const RoutineEditor = ({ routine, onUpdateRoutine }) => {
 
 // ---------- Resumen pareja ----------
 const PartnerSummary = ({ partner }) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg">
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 sm:p-6 rounded-lg">
       <h3 className="font-bold text-gray-800 mb-3">Esta Semana</h3>
       <p className="text-3xl font-bold text-blue-500">{partner.sessionsThisWeek}/{partner.targetDays || '-'}</p>
       <p className="text-gray-600 text-sm">Días entrenados</p>
     </div>
-    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg">
+    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 sm:p-6 rounded-lg">
       <h3 className="font-bold text-gray-800 mb-3">Peso Actual</h3>
       <p className="text-3xl font-bold text-purple-500">{partner.currentWeight ?? 'N/A'}</p>
       <p className="text-gray-600 text-sm">kg</p>
