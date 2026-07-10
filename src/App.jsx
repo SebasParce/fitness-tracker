@@ -115,6 +115,20 @@ const getWeekStart = () => {
 
 const todayStr = () => new Date().toISOString().split('T')[0];
 
+// Busca el registro más reciente (peso y reps) para un ejercicio dado, por nombre
+const getLastLog = (exerciseName, sessions) => {
+  let last = null;
+  sessions.forEach(s => {
+    const entry = s.entries.find(en => en.name === exerciseName);
+    if (!entry) return;
+    const isNewer = !last || s.date > last.date || (s.date === last.date && (s.created_at || '') > (last.created_at || ''));
+    if (isNewer) {
+      last = { weight: entry.weight, reps: entry.reps, date: s.date, created_at: s.created_at };
+    }
+  });
+  return last;
+};
+
 const FitnessTracker = () => {
   // ---------- Autenticación ----------
   const [session, setSession] = useState(undefined); // undefined = verificando, null = sin sesión, objeto = logueado
@@ -491,7 +505,7 @@ const FitnessTracker = () => {
           {routine.days.length === 0 ? (
             <p className="text-gray-600">Todavía no tienes una rutina configurada. Ve a "Editar mi rutina" más abajo para crearla.</p>
           ) : (
-            <WorkoutLogger routine={routine} onSaveSession={handleSaveSession} />
+            <WorkoutLogger routine={routine} sessions={workoutSessions} onSaveSession={handleSaveSession} />
           )}
         </div>
 
@@ -537,7 +551,7 @@ const FitnessTracker = () => {
 };
 
 // ---------- Registrar entrenamiento ----------
-const WorkoutLogger = ({ routine, onSaveSession }) => {
+const WorkoutLogger = ({ routine, sessions, onSaveSession }) => {
   const [selectedDayId, setSelectedDayId] = useState(routine.days[0]?.id || '');
   const selectedDay = routine.days.find(d => d.id === selectedDayId) || routine.days[0];
 
@@ -607,13 +621,20 @@ const WorkoutLogger = ({ routine, onSaveSession }) => {
       </div>
 
       <div className="space-y-3">
-        {selectedDay.exercises.map(exr => (
+        {selectedDay.exercises.map(exr => {
+          const lastLog = getLastLog(exr.name, sessions);
+          return (
           <div key={exr.id} className="border border-gray-200 rounded-lg p-3 sm:p-4">
             <div className="flex flex-col mb-3">
               <h3 className="font-bold text-gray-800 text-sm sm:text-base">{exr.name}</h3>
               <span className="text-xs sm:text-sm text-gray-500">
                 Objetivo: {exr.sets}x{exr.reps}{exr.rest ? ` · descanso ${exr.rest}` : ''}
               </span>
+              {lastLog && (
+                <span className="text-xs text-gray-400 mt-0.5">
+                  Última vez: {lastLog.weight}kg x{lastLog.reps}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <input
@@ -634,7 +655,8 @@ const WorkoutLogger = ({ routine, onSaveSession }) => {
               />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <button
