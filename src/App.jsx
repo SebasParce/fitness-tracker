@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Plus, Trash2, LogOut, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
-const STORAGE_KEY = 'fitnessUsers_v2';
-const SESSION_KEY = 'fitnessSession_v1';
-
-// ---------- Helpers para definir rutinas ----------
+// ---------- Plantillas de rutina (punto de partida opcional al crear cuenta) ----------
 let exCounter = 0;
 const ex = (name, sets, reps, rest) => ({ id: `e${++exCounter}`, name, sets, reps, rest: rest || null });
 const day = (id, name, exercises) => ({ id, name, exercises });
@@ -118,128 +116,222 @@ const getWeekStart = () => {
 const todayStr = () => new Date().toISOString().split('T')[0];
 
 const FitnessTracker = () => {
-  const [currentUser, setCurrentUser] = useState(null);
+  // ---------- Autenticación ----------
+  const [session, setSession] = useState(undefined); // undefined = verificando, null = sin sesión, objeto = logueado
+  const [authError, setAuthError] = useState('');
+  const [registerMessage, setRegisterMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [users, setUsers] = useState({});
-  const [loaded, setLoaded] = useState(false);
-  const [newUsername, setNewUsername] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [registerForm, setRegisterForm] = useState({ displayName: '', email: '', password: '' });
   const [showRegister, setShowRegister] = useState(false);
 
+  // ---------- Datos del usuario ----------
+  const [dataLoading, setDataLoading] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [routine, setRoutine] = useState(null);
+  const [workoutSessions, setWorkoutSessions] = useState([]);
+  const [weeklyWeight, setWeeklyWeight] = useState([]);
+  const [partner, setPartner] = useState(null);
+
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    let loadedUsers;
-    if (saved) {
-      loadedUsers = JSON.parse(saved);
-      setUsers(loadedUsers);
-    } else {
-      const demoUsers = {
-        sebas: {
-          password: 'sebas123',
-          displayName: 'Sebas',
-          routine: buildSebasRoutine(),
-          weeklyWeight: [
-            { date: new Date(Date.now() - 21 * 86400000).toISOString().split('T')[0], weight: 75.5 },
-            { date: new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0], weight: 74.8 },
-            { date: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0], weight: 74.2 },
-          ],
-          sessions: []
-        },
-        anamaria: {
-          password: 'ana123',
-          displayName: 'Ana María',
-          routine: buildAnaRoutine(),
-          weeklyWeight: [
-            { date: new Date(Date.now() - 21 * 86400000).toISOString().split('T')[0], weight: 62.0 },
-            { date: new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0], weight: 61.5 },
-            { date: new Date(Date.now() - 7 * 86400000).toISOString().split('T')[0], weight: 61.2 },
-          ],
-          sessions: []
-        }
-      };
-      loadedUsers = demoUsers;
-      setUsers(demoUsers);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(demoUsers));
-    }
-
-    const savedSession = localStorage.getItem(SESSION_KEY);
-    if (savedSession && loadedUsers[savedSession]) {
-      setCurrentUser(savedSession);
-    }
-
-    setLoaded(true);
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => listener.subscription.unsubscribe();
   }, []);
 
-  const persist = (updated) => {
-    setUsers(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
+  const loadData = useCallback(async (userId) => {
+    setDataLoading(true);
+    try {
+      const [profileRes, routineRes, sessionsRes, weightRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        supabase.from('routines').select('*').eq('user_id', userId).single(),
+        supabase.from('workout_sessions').select('*').eq('user_id', userId).order('date', { ascending: true }),
+        supabase.from('body_weight_logs').select('*').eq('user_id', userId).order('date', { ascending: true }),
+      ]);
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    const uname = loginForm.username.trim().toLowerCase();
-    if (users[uname] && users[uname].password === loginForm.password) {
-      setCurrentUser(uname);
-      localStorage.setItem(SESSION_KEY, uname);
-      setLoginForm({ username: '', password: '' });
-    } else {
-      alert('Usuario o contraseña incorrectos');
-    }
-  };
+      if (profileRes.error) throw profileRes.error;
+      setProfile(profileRes.data);
+      setRoutine(routineRes.data ? { name: routineRes.data.name, days: routineRes.data.days } : { name: 'Mi rutina', days: [] });
+      setWorkoutSessions(sessionsRes.data || []);
+      setWeeklyWeight(weightRes.data || []);
 
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem(SESSION_KEY);
-  };
-
-  const handleRegister = (e) => {
-    e.preventDefault();
-    const uname = newUsername.trim().toLowerCase();
-    if (!uname || !newPassword) {
-      alert('Complete todos los campos');
-      return;
-    }
-    if (users[uname]) {
-      alert('El usuario ya existe');
-      return;
-    }
-    const updated = {
-      ...users,
-      [uname]: {
-        password: newPassword,
-        displayName: newUsername.trim(),
-        routine: { name: 'Mi rutina', days: [] },
-        weeklyWeight: [],
-        sessions: []
+      const { data: otherProfiles } = await supabase.from('profiles').select('*').neq('id', userId).limit(1);
+      if (otherProfiles && otherProfiles.length > 0) {
+        const partnerProfile = otherProfiles[0];
+        const [partnerSessionsRes, partnerWeightRes, partnerRoutineRes] = await Promise.all([
+          supabase.from('workout_sessions').select('id, date').eq('user_id', partnerProfile.id),
+          supabase.from('body_weight_logs').select('date, weight').eq('user_id', partnerProfile.id).order('date', { ascending: false }).limit(1),
+          supabase.from('routines').select('days').eq('user_id', partnerProfile.id).single(),
+        ]);
+        const weekStart = getWeekStart();
+        const sessionsThisWeek = (partnerSessionsRes.data || []).filter(s => new Date(s.date) >= weekStart).length;
+        setPartner({
+          profile: partnerProfile,
+          sessionsThisWeek,
+          targetDays: partnerRoutineRes.data?.days?.length || 0,
+          currentWeight: partnerWeightRes.data && partnerWeightRes.data[0] ? partnerWeightRes.data[0].weight : null,
+        });
+      } else {
+        setPartner(null);
       }
-    };
-    persist(updated);
-    setNewUsername('');
-    setNewPassword('');
-    setShowRegister(false);
-    alert('Cuenta creada. Ve a "Editar mi rutina" para armar tus días de entrenamiento.');
+    } catch (err) {
+      alert('Hubo un error cargando tus datos: ' + err.message);
+    } finally {
+      setDataLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      loadData(session.user.id);
+    } else {
+      setProfile(null);
+      setRoutine(null);
+      setWorkoutSessions([]);
+      setWeeklyWeight([]);
+      setPartner(null);
+    }
+  }, [session?.user?.id, loadData]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginForm.email.trim(),
+      password: loginForm.password,
+    });
+    if (error) {
+      setAuthError(error.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos' : error.message);
+      return;
+    }
+    setLoginForm({ email: '', password: '' });
   };
 
-  if (!loaded) return null;
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setRegisterMessage('');
+    if (!registerForm.displayName.trim() || !registerForm.email.trim() || !registerForm.password) {
+      setAuthError('Completa todos los campos');
+      return;
+    }
+    const { data, error } = await supabase.auth.signUp({
+      email: registerForm.email.trim(),
+      password: registerForm.password,
+      options: { data: { display_name: registerForm.displayName.trim() } },
+    });
+    if (error) {
+      setAuthError(error.message);
+      return;
+    }
+    if (!data.session) {
+      setRegisterMessage('Cuenta creada. Revisa tu correo y confirma tu cuenta antes de ingresar.');
+    }
+    setRegisterForm({ displayName: '', email: '', password: '' });
+  };
 
-  if (!currentUser) {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // ---------- Mutaciones ----------
+  const handleSaveSession = async (dayId, dayName, entries) => {
+    const { data, error } = await supabase
+      .from('workout_sessions')
+      .insert({ user_id: session.user.id, date: todayStr(), day_id: dayId, day_name: dayName, entries })
+      .select()
+      .single();
+    if (error) {
+      alert('Error al guardar el entrenamiento: ' + error.message);
+      return false;
+    }
+    setWorkoutSessions(prev => [...prev, data]);
+    return true;
+  };
+
+  const handleDeleteSession = async (id) => {
+    const { error } = await supabase.from('workout_sessions').delete().eq('id', id);
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+      return;
+    }
+    setWorkoutSessions(prev => prev.filter(s => s.id !== id));
+  };
+
+  const handleAddWeight = async (date, weight) => {
+    const { data, error } = await supabase
+      .from('body_weight_logs')
+      .upsert({ user_id: session.user.id, date, weight }, { onConflict: 'user_id,date' })
+      .select()
+      .single();
+    if (error) {
+      alert('Error al guardar el peso: ' + error.message);
+      return;
+    }
+    setWeeklyWeight(prev => {
+      const filtered = prev.filter(w => w.date !== date);
+      return [...filtered, data].sort((a, b) => a.date.localeCompare(b.date));
+    });
+  };
+
+  const handleDeleteWeight = async (date) => {
+    const { error } = await supabase.from('body_weight_logs').delete().eq('user_id', session.user.id).eq('date', date);
+    if (error) {
+      alert('Error al eliminar: ' + error.message);
+      return;
+    }
+    setWeeklyWeight(prev => prev.filter(w => w.date !== date));
+  };
+
+  const handleUpdateRoutine = async (newRoutine) => {
+    const { data, error } = await supabase
+      .from('routines')
+      .upsert({ user_id: session.user.id, name: newRoutine.name, days: newRoutine.days }, { onConflict: 'user_id' })
+      .select()
+      .single();
+    if (error) {
+      alert('Error al guardar la rutina: ' + error.message);
+      return;
+    }
+    setRoutine({ name: data.name, days: data.days });
+  };
+
+  // ---------- Pantallas de carga ----------
+  if (session === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600">
+        <p className="text-white text-xl font-semibold">Cargando...</p>
+      </div>
+    );
+  }
+
+  // ---------- Login / registro ----------
+  if (!session) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-2xl w-full max-w-md p-8">
           <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">💪 Fitness Tracker</h1>
 
+          {authError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">{authError}</div>
+          )}
+          {registerMessage && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">{registerMessage}</div>
+          )}
+
           {!showRegister ? (
             <>
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-2">Usuario</label>
+                  <label className="block text-gray-700 font-semibold mb-2">Correo electrónico</label>
                   <input
-                    type="text"
-                    value={loginForm.username}
-                    onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                    type="email"
+                    value={loginForm.email}
+                    onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Tu usuario"
+                    placeholder="tu@correo.com"
                   />
                 </div>
                 <div>
@@ -271,39 +363,44 @@ const FitnessTracker = () => {
               <div className="mt-6 text-center">
                 <p className="text-gray-600">¿No tienes cuenta?</p>
                 <button
-                  onClick={() => setShowRegister(true)}
+                  onClick={() => { setShowRegister(true); setAuthError(''); setRegisterMessage(''); }}
                   className="text-blue-500 font-semibold hover:underline"
                 >
                   Crear nueva cuenta
                 </button>
-              </div>
-              <div className="mt-6 p-4 bg-gray-100 rounded-lg">
-                <p className="text-xs text-gray-600 font-semibold mb-2">Demo:</p>
-                <p className="text-xs text-gray-600">Usuario: <strong>sebas</strong> | Contraseña: <strong>sebas123</strong></p>
-                <p className="text-xs text-gray-600">Usuario: <strong>anamaria</strong> | Contraseña: <strong>ana123</strong></p>
               </div>
             </>
           ) : (
             <>
               <form onSubmit={handleRegister} className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-2">Nuevo usuario</label>
+                  <label className="block text-gray-700 font-semibold mb-2">Nombre</label>
                   <input
                     type="text"
-                    value={newUsername}
-                    onChange={(e) => setNewUsername(e.target.value)}
+                    value={registerForm.displayName}
+                    onChange={(e) => setRegisterForm({ ...registerForm, displayName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Ej: sebas"
+                    placeholder="Ej: Sebas"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 font-semibold mb-2">Correo electrónico</label>
+                  <input
+                    type="email"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="tu@correo.com"
                   />
                 </div>
                 <div>
                   <label className="block text-gray-700 font-semibold mb-2">Contraseña</label>
                   <input
                     type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
+                    value={registerForm.password}
+                    onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Tu contraseña"
+                    placeholder="Mínimo 6 caracteres"
                   />
                 </div>
                 <button
@@ -314,7 +411,7 @@ const FitnessTracker = () => {
                 </button>
               </form>
               <button
-                onClick={() => setShowRegister(false)}
+                onClick={() => { setShowRegister(false); setAuthError(''); setRegisterMessage(''); }}
                 className="w-full mt-4 text-gray-600 hover:underline"
               >
                 Volver
@@ -326,15 +423,20 @@ const FitnessTracker = () => {
     );
   }
 
-  const userData = users[currentUser];
-  const sessions = userData.sessions || [];
-  const weeklyWeight = userData.weeklyWeight || [];
-  const routine = userData.routine || { name: '', days: [] };
+  // ---------- Cargando datos tras login ----------
+  if (dataLoading || !profile || !routine) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+        <p className="text-gray-600 text-xl font-semibold">Cargando tus datos...</p>
+      </div>
+    );
+  }
 
+  // ---------- Dashboard ----------
   const weekStart = getWeekStart();
-  const sessionsThisWeek = sessions.filter(s => new Date(s.date) >= weekStart);
-  const totalExercisesLogged = sessions.reduce((sum, s) => sum + s.entries.length, 0);
-  const otherUser = Object.keys(users).find(u => u !== currentUser);
+  const sessionsThisWeek = workoutSessions.filter(s => new Date(s.date) >= weekStart);
+  const totalExercisesLogged = workoutSessions.reduce((sum, s) => sum + s.entries.length, 0);
+  const todaySessions = workoutSessions.filter(s => s.date === todayStr());
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
@@ -345,7 +447,7 @@ const FitnessTracker = () => {
             <p className="text-blue-100 text-sm">{routine.name || 'Sin rutina configurada'}</p>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-lg font-semibold">{userData.displayName || currentUser}</span>
+            <span className="text-lg font-semibold">{profile.display_name}</span>
             <button
               onClick={handleLogout}
               className="bg-red-500 hover:bg-red-600 p-2 rounded-lg flex items-center gap-2"
@@ -388,44 +490,44 @@ const FitnessTracker = () => {
           {routine.days.length === 0 ? (
             <p className="text-gray-600">Todavía no tienes una rutina configurada. Ve a "Editar mi rutina" más abajo para crearla.</p>
           ) : (
-            <WorkoutLogger currentUser={currentUser} users={users} persist={persist} routine={routine} />
+            <WorkoutLogger routine={routine} onSaveSession={handleSaveSession} />
           )}
         </div>
 
         {/* Today's sessions */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Entrenamientos de Hoy</h2>
-          <TodaySessions currentUser={currentUser} users={users} persist={persist} />
+          <TodaySessions sessions={todaySessions} onDelete={handleDeleteSession} />
         </div>
 
         {/* Body weight */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Peso Corporal</h2>
-          <BodyWeightSection currentUser={currentUser} users={users} persist={persist} weeklyWeight={weeklyWeight} />
+          <BodyWeightSection weeklyWeight={weeklyWeight} onAdd={handleAddWeight} onDelete={handleDeleteWeight} />
         </div>
 
         {/* Exercise progress */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Progreso por Ejercicio</h2>
-          <ExerciseProgressChart routine={routine} sessions={sessions} />
+          <ExerciseProgressChart routine={routine} sessions={workoutSessions} />
         </div>
 
         {/* Days distribution */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Distribución de Días Entrenados</h2>
-          <DaysChart sessions={sessions} />
+          <DaysChart sessions={workoutSessions} />
         </div>
 
         {/* Routine editor */}
         <div className="bg-white rounded-lg shadow p-6">
-          <RoutineEditor currentUser={currentUser} users={users} persist={persist} />
+          <RoutineEditor routine={routine} onUpdateRoutine={handleUpdateRoutine} />
         </div>
 
         {/* Partner summary */}
-        {otherUser && (
+        {partner && (
           <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Resumen de {users[otherUser].displayName || otherUser}</h2>
-            <OtherUserSummary userData={users[otherUser]} />
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Resumen de {partner.profile.display_name}</h2>
+            <PartnerSummary partner={partner} />
           </div>
         )}
       </div>
@@ -434,11 +536,12 @@ const FitnessTracker = () => {
 };
 
 // ---------- Registrar entrenamiento ----------
-const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
+const WorkoutLogger = ({ routine, onSaveSession }) => {
   const [selectedDayId, setSelectedDayId] = useState(routine.days[0]?.id || '');
   const selectedDay = routine.days.find(d => d.id === selectedDayId) || routine.days[0];
 
   const [logState, setLogState] = useState({}); // exerciseId -> {weight, reps}
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!selectedDay) return;
@@ -458,7 +561,7 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
     }));
   };
 
-  const saveSession = () => {
+  const saveSession = async () => {
     const entries = selectedDay.exercises
       .filter(exr => logState[exr.id] && logState[exr.id].weight !== '' && logState[exr.id].reps !== '')
       .map(exr => ({
@@ -475,27 +578,18 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
       return;
     }
 
-    const newSession = {
-      id: Date.now(),
-      date: todayStr(),
-      dayId: selectedDay.id,
-      dayName: selectedDay.name,
-      entries
-    };
+    setSaving(true);
+    const ok = await onSaveSession(selectedDay.id, selectedDay.name, entries);
+    setSaving(false);
 
-    const updated = { ...users };
-    updated[currentUser] = {
-      ...updated[currentUser],
-      sessions: [...(updated[currentUser].sessions || []), newSession]
-    };
-    persist(updated);
-
-    const reset = {};
-    selectedDay.exercises.forEach(exr => {
-      reset[exr.id] = { weight: '', reps: '' };
-    });
-    setLogState(reset);
-    alert('Entrenamiento guardado');
+    if (ok) {
+      const reset = {};
+      selectedDay.exercises.forEach(exr => {
+        reset[exr.id] = { weight: '', reps: '' };
+      });
+      setLogState(reset);
+      alert('Entrenamiento guardado');
+    }
   };
 
   return (
@@ -542,39 +636,28 @@ const WorkoutLogger = ({ currentUser, users, persist, routine }) => {
 
       <button
         onClick={saveSession}
-        className="w-full bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600 transition"
+        disabled={saving}
+        className="w-full bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600 transition disabled:opacity-50"
       >
-        Guardar Entrenamiento
+        {saving ? 'Guardando...' : 'Guardar Entrenamiento'}
       </button>
     </div>
   );
 };
 
 // ---------- Entrenamientos de hoy ----------
-const TodaySessions = ({ currentUser, users, persist }) => {
-  const today = todayStr();
-  const todaySessions = (users[currentUser].sessions || []).filter(s => s.date === today);
-
-  const deleteSession = (id) => {
-    const updated = { ...users };
-    updated[currentUser] = {
-      ...updated[currentUser],
-      sessions: updated[currentUser].sessions.filter(s => s.id !== id)
-    };
-    persist(updated);
-  };
-
-  if (todaySessions.length === 0) {
+const TodaySessions = ({ sessions, onDelete }) => {
+  if (sessions.length === 0) {
     return <p className="text-gray-600">No hay entrenamientos registrados para hoy</p>;
   }
 
   return (
     <div className="space-y-3">
-      {todaySessions.map(session => (
+      {sessions.map(session => (
         <div key={session.id} className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border-l-4 border-blue-500">
           <div className="flex justify-between items-start">
-            <p className="font-bold text-lg text-gray-800">{session.dayName}</p>
-            <button onClick={() => deleteSession(session.id)} className="text-red-500 hover:text-red-700">
+            <p className="font-bold text-lg text-gray-800">{session.day_name}</p>
+            <button onClick={() => onDelete(session.id)} className="text-red-500 hover:text-red-700">
               <Trash2 size={18} />
             </button>
           </div>
@@ -592,37 +675,20 @@ const TodaySessions = ({ currentUser, users, persist }) => {
 };
 
 // ---------- Peso corporal ----------
-const BodyWeightSection = ({ currentUser, users, persist, weeklyWeight }) => {
+const BodyWeightSection = ({ weeklyWeight, onAdd, onDelete }) => {
   const [weight, setWeight] = useState('');
   const [date, setDate] = useState(todayStr());
+  const [saving, setSaving] = useState(false);
 
-  const addWeight = () => {
+  const addWeight = async () => {
     if (!weight || isNaN(parseFloat(weight))) {
       alert('Ingresa un peso válido');
       return;
     }
-    const updated = { ...users };
-    const list = [...(updated[currentUser].weeklyWeight || [])];
-    const existingIdx = list.findIndex(w => w.date === date);
-    const entry = { date, weight: parseFloat(weight) };
-    if (existingIdx >= 0) {
-      list[existingIdx] = entry;
-    } else {
-      list.push(entry);
-    }
-    list.sort((a, b) => a.date.localeCompare(b.date));
-    updated[currentUser] = { ...updated[currentUser], weeklyWeight: list };
-    persist(updated);
+    setSaving(true);
+    await onAdd(date, parseFloat(weight));
+    setSaving(false);
     setWeight('');
-  };
-
-  const deleteWeight = (d) => {
-    const updated = { ...users };
-    updated[currentUser] = {
-      ...updated[currentUser],
-      weeklyWeight: updated[currentUser].weeklyWeight.filter(w => w.date !== d)
-    };
-    persist(updated);
   };
 
   const chartData = weeklyWeight.map(w => ({ ...w, label: w.date }));
@@ -652,7 +718,8 @@ const BodyWeightSection = ({ currentUser, users, persist, weeklyWeight }) => {
         </div>
         <button
           onClick={addWeight}
-          className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 font-semibold flex items-center gap-2"
+          disabled={saving}
+          className="bg-purple-500 text-white px-6 py-2 rounded-lg hover:bg-purple-600 font-semibold flex items-center gap-2 disabled:opacity-50"
         >
           <Plus size={20} /> Registrar
         </button>
@@ -682,7 +749,7 @@ const BodyWeightSection = ({ currentUser, users, persist, weeklyWeight }) => {
                   <td className="py-1.5 text-gray-600">{w.date}</td>
                   <td className="py-1.5 font-semibold">{w.weight} kg</td>
                   <td className="py-1.5 text-right">
-                    <button onClick={() => deleteWeight(w.date)} className="text-red-400 hover:text-red-600">
+                    <button onClick={() => onDelete(w.date)} className="text-red-400 hover:text-red-600">
                       <Trash2 size={14} />
                     </button>
                   </td>
@@ -753,7 +820,7 @@ const ExerciseProgressChart = ({ routine, sessions }) => {
 const DaysChart = ({ sessions }) => {
   const dayCount = {};
   sessions.forEach(s => {
-    dayCount[s.dayName] = (dayCount[s.dayName] || 0) + 1;
+    dayCount[s.day_name] = (dayCount[s.day_name] || 0) + 1;
   });
 
   const data = Object.entries(dayCount).map(([name, value]) => ({ name, value }));
@@ -774,57 +841,76 @@ const DaysChart = ({ sessions }) => {
 };
 
 // ---------- Editor de rutina ----------
-const RoutineEditor = ({ currentUser, users, persist }) => {
+const RoutineEditor = ({ routine, onUpdateRoutine }) => {
   const [open, setOpen] = useState(false);
-  const routine = users[currentUser].routine || { name: '', days: [] };
+  const [draft, setDraft] = useState(routine);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const updateRoutine = (newRoutine) => {
-    const updated = { ...users };
-    updated[currentUser] = { ...updated[currentUser], routine: newRoutine };
-    persist(updated);
+  useEffect(() => {
+    setDraft(routine);
+    setDirty(false);
+  }, [routine]);
+
+  const updateDraft = (updater) => {
+    setDraft(prev => updater(prev));
+    setDirty(true);
   };
 
-  const updateRoutineName = (name) => updateRoutine({ ...routine, name });
+  const updateRoutineName = (name) => updateDraft(prev => ({ ...prev, name }));
 
-  const addDay = () => {
-    const newDay = { id: `d${Date.now()}`, name: `Día ${routine.days.length + 1}`, exercises: [] };
-    updateRoutine({ ...routine, days: [...routine.days, newDay] });
-  };
+  const addDay = () => updateDraft(prev => ({
+    ...prev,
+    days: [...prev.days, { id: `d${Date.now()}`, name: `Día ${prev.days.length + 1}`, exercises: [] }]
+  }));
 
   const updateDayName = (dayId, name) => {
-    updateRoutine({ ...routine, days: routine.days.map(d => d.id === dayId ? { ...d, name } : d) });
+    updateDraft(prev => ({ ...prev, days: prev.days.map(d => d.id === dayId ? { ...d, name } : d) }));
   };
 
   const deleteDay = (dayId) => {
     if (!window.confirm('¿Eliminar este día de la rutina?')) return;
-    updateRoutine({ ...routine, days: routine.days.filter(d => d.id !== dayId) });
+    updateDraft(prev => ({ ...prev, days: prev.days.filter(d => d.id !== dayId) }));
   };
 
   const addExercise = (dayId) => {
-    updateRoutine({
-      ...routine,
-      days: routine.days.map(d => d.id === dayId
+    updateDraft(prev => ({
+      ...prev,
+      days: prev.days.map(d => d.id === dayId
         ? { ...d, exercises: [...d.exercises, { id: `e${Date.now()}`, name: 'Nuevo ejercicio', sets: 3, reps: '10-12', rest: null }] }
         : d)
-    });
+    }));
   };
 
   const updateExercise = (dayId, exId, field, value) => {
-    updateRoutine({
-      ...routine,
-      days: routine.days.map(d => d.id === dayId
+    updateDraft(prev => ({
+      ...prev,
+      days: prev.days.map(d => d.id === dayId
         ? { ...d, exercises: d.exercises.map(e => e.id === exId ? { ...e, [field]: value } : e) }
         : d)
-    });
+    }));
   };
 
   const deleteExercise = (dayId, exId) => {
-    updateRoutine({
-      ...routine,
-      days: routine.days.map(d => d.id === dayId
+    updateDraft(prev => ({
+      ...prev,
+      days: prev.days.map(d => d.id === dayId
         ? { ...d, exercises: d.exercises.filter(e => e.id !== exId) }
         : d)
-    });
+    }));
+  };
+
+  const loadTemplate = (builder) => {
+    if (draft.days.length > 0 && !window.confirm('Esto reemplazará tu rutina actual. ¿Continuar?')) return;
+    setDraft(builder());
+    setDirty(true);
+  };
+
+  const saveChanges = async () => {
+    setSaving(true);
+    await onUpdateRoutine(draft);
+    setSaving(false);
+    setDirty(false);
   };
 
   return (
@@ -839,17 +925,37 @@ const RoutineEditor = ({ currentUser, users, persist }) => {
 
       {open && (
         <div className="space-y-6">
+          {draft.days.length === 0 && (
+            <div className="bg-blue-50 p-4 rounded-lg space-y-2">
+              <p className="text-gray-700 text-sm">Puedes empezar desde cero o cargar una rutina de ejemplo para editar:</p>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => loadTemplate(buildSebasRoutine)}
+                  className="bg-white border border-blue-300 text-blue-600 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-100"
+                >
+                  Usar rutina de Sebas
+                </button>
+                <button
+                  onClick={() => loadTemplate(buildAnaRoutine)}
+                  className="bg-white border border-blue-300 text-blue-600 px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-blue-100"
+                >
+                  Usar rutina de Ana María
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-gray-700 font-semibold mb-2">Nombre de la rutina</label>
             <input
               type="text"
-              value={routine.name}
+              value={draft.name}
               onChange={(e) => updateRoutineName(e.target.value)}
               className="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {routine.days.map(d => (
+          {draft.days.map(d => (
             <div key={d.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-3">
                 <input
@@ -919,6 +1025,14 @@ const RoutineEditor = ({ currentUser, users, persist }) => {
           >
             <Plus size={18} /> Agregar día de rutina
           </button>
+
+          <button
+            onClick={saveChanges}
+            disabled={!dirty || saving}
+            className="w-full bg-blue-500 text-white py-3 rounded-lg font-bold hover:bg-blue-600 transition disabled:opacity-50"
+          >
+            {saving ? 'Guardando...' : 'Guardar Rutina'}
+          </button>
         </div>
       )}
     </div>
@@ -926,27 +1040,19 @@ const RoutineEditor = ({ currentUser, users, persist }) => {
 };
 
 // ---------- Resumen pareja ----------
-const OtherUserSummary = ({ userData }) => {
-  const weekStart = getWeekStart();
-  const completedThisWeek = (userData.sessions || []).filter(s => new Date(s.date) >= weekStart).length;
-  const target = userData.routine?.days?.length || 0;
-  const weeklyWeight = userData.weeklyWeight || [];
-  const currentWeight = weeklyWeight.length > 0 ? weeklyWeight[weeklyWeight.length - 1].weight : 'N/A';
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg">
-        <h3 className="font-bold text-gray-800 mb-3">Esta Semana</h3>
-        <p className="text-3xl font-bold text-blue-500">{completedThisWeek}/{target || '-'}</p>
-        <p className="text-gray-600 text-sm">Días entrenados</p>
-      </div>
-      <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg">
-        <h3 className="font-bold text-gray-800 mb-3">Peso Actual</h3>
-        <p className="text-3xl font-bold text-purple-500">{currentWeight}</p>
-        <p className="text-gray-600 text-sm">kg</p>
-      </div>
+const PartnerSummary = ({ partner }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg">
+      <h3 className="font-bold text-gray-800 mb-3">Esta Semana</h3>
+      <p className="text-3xl font-bold text-blue-500">{partner.sessionsThisWeek}/{partner.targetDays || '-'}</p>
+      <p className="text-gray-600 text-sm">Días entrenados</p>
     </div>
-  );
-};
+    <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-lg">
+      <h3 className="font-bold text-gray-800 mb-3">Peso Actual</h3>
+      <p className="text-3xl font-bold text-purple-500">{partner.currentWeight ?? 'N/A'}</p>
+      <p className="text-gray-600 text-sm">kg</p>
+    </div>
+  </div>
+);
 
 export default FitnessTracker;
