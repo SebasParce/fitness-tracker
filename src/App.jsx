@@ -3,6 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Plus, Trash2, LogOut, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 
 const STORAGE_KEY = 'fitnessUsers_v2';
+const SESSION_KEY = 'fitnessSession_v1';
 
 // ---------- Helpers para definir rutinas ----------
 let exCounter = 0;
@@ -128,8 +129,10 @@ const FitnessTracker = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
+    let loadedUsers;
     if (saved) {
-      setUsers(JSON.parse(saved));
+      loadedUsers = JSON.parse(saved);
+      setUsers(loadedUsers);
     } else {
       const demoUsers = {
         sebas: {
@@ -155,9 +158,16 @@ const FitnessTracker = () => {
           sessions: []
         }
       };
+      loadedUsers = demoUsers;
       setUsers(demoUsers);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(demoUsers));
     }
+
+    const savedSession = localStorage.getItem(SESSION_KEY);
+    if (savedSession && loadedUsers[savedSession]) {
+      setCurrentUser(savedSession);
+    }
+
     setLoaded(true);
   }, []);
 
@@ -171,10 +181,16 @@ const FitnessTracker = () => {
     const uname = loginForm.username.trim().toLowerCase();
     if (users[uname] && users[uname].password === loginForm.password) {
       setCurrentUser(uname);
+      localStorage.setItem(SESSION_KEY, uname);
       setLoginForm({ username: '', password: '' });
     } else {
       alert('Usuario o contraseña incorrectos');
     }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem(SESSION_KEY);
   };
 
   const handleRegister = (e) => {
@@ -331,7 +347,7 @@ const FitnessTracker = () => {
           <div className="flex items-center gap-4">
             <span className="text-lg font-semibold">{userData.displayName || currentUser}</span>
             <button
-              onClick={() => setCurrentUser(null)}
+              onClick={handleLogout}
               className="bg-red-500 hover:bg-red-600 p-2 rounded-lg flex items-center gap-2"
             >
               <LogOut size={20} /> Salir
